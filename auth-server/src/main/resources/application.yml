@@ -1,0 +1,11 @@
+spring.datasource:
+  url: jdbc:mysql://localhost:3306/test?autoReconnect=true&useSSL=false
+  username: root
+
+security.oauth2.authorization:
+  checkTokenAccess: isAuthenticated()
+  tokenKeyAccess: permitAll()
+
+logging:
+  level:
+    org.springframework: debug
