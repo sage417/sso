@@ -9,3 +9,5 @@ security.oauth2.authorization:
 logging:
   level:
     org.springframework: debug
+server:
+  port: 8083

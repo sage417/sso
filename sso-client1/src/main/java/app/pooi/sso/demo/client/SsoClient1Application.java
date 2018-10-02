@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.ResourceServerProperties;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.UserInfoTokenServices;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -29,10 +30,13 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.filter.CompositeFilter;
 
 import javax.servlet.Filter;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 
@@ -64,15 +68,35 @@ public class SsoClient1Application extends WebSecurityConfigurerAdapter {
                 .authenticated()
                 .and().logout().logoutSuccessUrl("/").permitAll()
                 .and().csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .and().addFilterBefore(ssoFilter(jwtTokenServices(jwtTokenStore())), BasicAuthenticationFilter.class);
+                .and().addFilterBefore(ssoFilter(), BasicAuthenticationFilter.class);
     }
 
-    public Filter ssoFilter(ResourceServerTokenServices tokenServices) {
+    private Filter pooiFilter(ResourceServerTokenServices tokenServices) {
         OAuth2ClientAuthenticationProcessingFilter facebookFilter = new OAuth2ClientAuthenticationProcessingFilter("/login/pooi");
         OAuth2RestTemplate facebookTemplate = new OAuth2RestTemplate(facebook(), oauth2ClientContext);
         facebookFilter.setRestTemplate(facebookTemplate);
         facebookFilter.setTokenServices(tokenServices);
         return facebookFilter;
+    }
+
+    private Filter ssoFilter() {
+
+        CompositeFilter filter = new CompositeFilter();
+        List<Filter> filters = new ArrayList<>();
+
+        filters.add(pooiFilter(jwtTokenServices(jwtTokenStore())));
+
+        OAuth2ClientAuthenticationProcessingFilter githubFilter = new OAuth2ClientAuthenticationProcessingFilter("/login/github");
+        OAuth2RestTemplate githubTemplate = new OAuth2RestTemplate(github(), oauth2ClientContext);
+        githubFilter.setRestTemplate(githubTemplate);
+        UserInfoTokenServices tokenServices = new UserInfoTokenServices(githubResource().getUserInfoUri(), github().getClientId());
+        tokenServices.setRestTemplate(githubTemplate);
+        githubFilter.setTokenServices(tokenServices);
+        filters.add(githubFilter);
+
+        filter.setFilters(filters);
+        return filter;
+
     }
 
     @Bean
@@ -85,6 +109,18 @@ public class SsoClient1Application extends WebSecurityConfigurerAdapter {
     @ConfigurationProperties("pooi.resource")
     public ResourceServerProperties facebookResource() {
         return new ResourceServerProperties(this.facebook().getClientId(), this.facebook().getClientSecret());
+    }
+
+    @Bean
+    @ConfigurationProperties("github.client")
+    public AuthorizationCodeResourceDetails github() {
+        return new AuthorizationCodeResourceDetails();
+    }
+
+    @Bean
+    @ConfigurationProperties("github.resource")
+    public ResourceServerProperties githubResource() {
+        return new ResourceServerProperties();
     }
 
     @Bean
