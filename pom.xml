@@ -11,7 +11,7 @@
 
     <modules>
         <module>auth-server</module>
-        <!--<module>sso-client1</module>-->
+        <module>sso-client1</module>
     </modules>
 
     <properties>

@@ -1,0 +1,18 @@
+auth-server: http://sso-auth:8080 # sso-server地址
+server:
+  port: 8083
+security:
+  oauth2:
+    client:
+      client-id: pooi_sso_client_1
+      client-secret: pooi_sso_client_1
+      user-authorization-uri: ${auth-server}/oauth/authorize #请求认证的地址
+      access-token-uri: ${auth-server}/oauth/token #请求令牌的地址
+      registered-redirect-uri: http://sso-taobao:8083
+    resource:
+      jwt:
+        key-uri: ${auth-server}/oauth/token_key #解析jwt令牌所需要密钥的地址
+logging:
+  level:
+    org.springframework: debug
+
